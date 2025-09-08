@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'imagem_produto.dart';
+import '../providers/carrinho.dart';
+import '../carrinho/models.dart';
+import 'package:provider/provider.dart';
 
 class Grupo {
   final String codigo;
@@ -92,13 +95,59 @@ class _CardapioPageState extends State<CardapioPage> {
           title: const Text("🍽️ Cardápio Online"),
           centerTitle: true,
           actions: [
-            ElevatedButton(
-              onPressed: () => context.go('/admin'),
-              child: Text("Ir pro Administrativo"),
-            )
+            Consumer<CarrinhoProvider>(
+              builder: (context, carrinho, _) {
+                int totalItens = carrinho.itens.fold(
+                  0,
+                  (sum, item) => sum + item.quantidade,
+                );
+
+                return Stack(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        context.go('/carrinho');
+                      },
+                      icon: const Icon(
+                        Icons.shopping_cart,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    if (totalItens > 0)
+                      Positioned(
+                        right: 4,
+                        top: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          child: Text(
+                            totalItens.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           ],
           bottom: TabBar(
             isScrollable: true,
+            labelColor: Colors.blue,
+            dividerColor: Colors.blue,
+            indicatorColor: Colors.blue,
             tabs: grupos.map((g) => Tab(text: g.descricao)).toList(),
           ),
         ),
@@ -110,58 +159,131 @@ class _CardapioPageState extends State<CardapioPage> {
                 maxCrossAxisExtent: 200,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: 0.8,
+                childAspectRatio: 0.7,
               ),
               itemCount: grupo.produtos.length,
               itemBuilder: (context, index) {
                 final p = grupo.produtos[index];
-                return Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 4,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: p.codba.isNotEmpty
-                            ? Center(
-                                child: ProdutoImageWidget(
-                                  codba: p.codba,
-                                  grid: true,
-                                  ip: '100.127.60.1',
-                                ),
-                              )
-                            : const Icon(Icons.fastfood,
-                                size: 60, color: Colors.grey),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
+
+                // Pega a quantidade atual do produto no carrinho
+                final carrinho = context.watch<CarrinhoProvider>();
+                final itemCarrinho = carrinho.itens.firstWhere(
+                  (item) => item.cod == p.codigo,
+                  orElse: () => ProdutoCarrinho(
+                      cod: p.codigo,
+                      produto: p.nome,
+                      preco: p.preco,
+                      quantidade: 0),
+                );
+                return GestureDetector(
+                  child: Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 4,
+                    child: Stack(
+                      children: [
+                        Column(
                           children: [
-                            Text(
-                              p.nome,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                            Flexible(
+                              flex: 3,
+                              child: Center(
+                                child: p.codba.isNotEmpty
+                                    ? ProdutoImageWidget(
+                                        codba: p.codba,
+                                        grid: true,
+                                        ip: '100.127.60.1',
+                                      )
+                                    : const Icon(
+                                        Icons.fastfood,
+                                        size: 50,
+                                        color: Colors.grey,
+                                      ),
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "R\$ ${p.preco.toStringAsFixed(2)}",
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.deepOrange,
+                            Flexible(
+                              flex: 2,
+                              child: Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      p.nome,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "R\$ ${p.preco.toStringAsFixed(2)}",
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.deepOrange),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                        if (itemCarrinho.quantidade > 0)
+                          Positioned(
+                            left: 8,
+                            top: 8,
+                            child: GestureDetector(
+                              onTap: () {
+                                context
+                                    .read<CarrinhoProvider>()
+                                    .diminuirQuantidade(p.codigo);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.remove,
+                                    size: 20, color: Colors.white),
+                              ),
+                            ),
+                          ),
+
+                        // Badge de quantidade
+                        if (itemCarrinho.quantidade > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: Colors.orange,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                itemCarrinho.quantidade.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
+                  onTap: () {
+                    context.read<CarrinhoProvider>().adicionar(
+                          ProdutoCarrinho(
+                            cod: p.codigo,
+                            produto: p.nome,
+                            preco: p.preco,
+                          ),
+                        );
+                  },
                 );
               },
             );

@@ -33,6 +33,34 @@ class MenuAdmState extends State<MenuAdm> {
                 context.go('/pedidos');
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.widgets),
+              title: const Text('Produtos'),
+              onTap: () {
+                context.go('/pedidos');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo),
+              title: const Text('Imagem'),
+              onTap: () {
+                context.go('/pedidos');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.percent),
+              title: const Text('Desconto'),
+              onTap: () {
+                context.go('/pedidos');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.credit_card),
+              title: const Text('Pagamentos'),
+              onTap: () {
+                context.go('/pedidos');
+              },
+            ),
           ],
         ),
       ),
